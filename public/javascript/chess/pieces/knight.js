@@ -24,7 +24,7 @@ Knight.prototype.moveTo = function(newPosition) {
         // Valid knight move
         this.position = targetCol + targetRow;
         this.render(); // Update the board after moving
-        console.log(Knight moved to ${this.position});
+        //console.log(Knight moved to ${this.position});
     } else {
         console.warn('Invalid move for a knight');
     }
