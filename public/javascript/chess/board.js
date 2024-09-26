@@ -1,9 +1,17 @@
 var Board = function(config){
     this.root_id = config.root_id;
     this.$el = document.getElementById(this.root_id);
+    this.turn = 'white'; // Start with white's turn
+    this.selectedPiece = null; // Track the selected piece
     this.generateBoardDom();
     this.addListeners();
 }
+
+Board.prototype.switchTurn = function() {
+    this.turn = (this.turn === 'white') ? 'black' : 'white';
+    console.log("It's now " + this.turn + "'s turn");
+};
+
 
 Board.prototype.addListeners = function(){
     this.$el.addEventListener('click', this.boardClicked.bind(this));
@@ -56,21 +64,41 @@ Board.prototype.clearSelection = function(){
         piece.classList.remove('selected');
     });
 };
-
 Board.prototype.boardClicked = function(event){    
-    this.clearSelection();    
+    this.clearSelection();
     const clickedCell = this.getClickedBlock(event);
-    const selectedPiece = this.getPieceAt(clickedCell)
-    if(selectedPiece){
-        //Add 'selected' class to the clicked piece    
+    
+    if (!clickedCell) return; // Exit if the click is not on a valid cell
+
+    const selectedPiece = this.getPieceAt(clickedCell);
+    
+    // If a piece is clicked, check if it's the current player's turn
+    if (selectedPiece) {
+        if (selectedPiece.color !== this.turn) {
+            console.warn("It's not your turn.");
+            return;
+        }
         this.selectPiece(event.target, selectedPiece);
-    }else{
-        //update position of the selected piece to new position
-        if(this.selectedPiece){
-            this.selectedPiece.moveTo(clickedCell);        
-        }                
+    } else {
+        // If no piece is clicked, attempt to move the selected piece
+        if (this.selectedPiece) {
+            // Only allow the piece to move if it's the correct player's turn
+            if (this.selectedPiece.color === this.turn) {
+                if (this.selectedPiece.isValidMove(clickedCell)) {
+                    this.selectedPiece.moveTo(clickedCell);
+                    this.switchTurn(); // Only switch turn if the move is valid
+                } else {
+                    console.warn("Invalid move for this piece.");
+                }
+            } else {
+                console.warn("It's not your turn.");
+            }
+        }
     }    
-}
+};
+
+
+
 
 Board.prototype.getPieceAt = function(cell){
     if (!cell || !cell.row || !cell.col) {

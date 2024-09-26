@@ -7,6 +7,20 @@ var King = function(config){
 King.prototype = Object.create(Piece.prototype);
 King.prototype.constructor = King;
 
+King.prototype.isValidMove = function(targetPosition) {
+    const startPos = this.position;
+    const startCol = startPos[0].charCodeAt(0);
+    const startRow = parseInt(startPos[1]);
+    const targetCol = targetPosition.col.charCodeAt(0);
+    const targetRow = parseInt(targetPosition.row);
+
+    const colDiff = Math.abs(startCol - targetCol);
+    const rowDiff = Math.abs(startRow - targetRow);
+
+    // King can move one square in any direction
+    return colDiff <= 1 && rowDiff <= 1;
+};
+
 King.prototype.moveTo = function(targetPosition){
     // Extract the current position (e.g., 'E1' -> 'E' and 1)
     let currentCol = this.position[0];

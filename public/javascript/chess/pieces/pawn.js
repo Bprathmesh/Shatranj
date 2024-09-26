@@ -7,7 +7,7 @@ var Pawn = function(config){
 
 Pawn.prototype = new Piece({});
 
-Pawn.prototype.isValidPosition = function(targetPosition){
+Pawn.prototype.isValidMove = function(targetPosition){
     // Convert current position to row and column
     let currentCol = this.position.charAt(0);
     let currentRow = parseInt(this.position.charAt(1));
@@ -38,7 +38,7 @@ Pawn.prototype.isValidPosition = function(targetPosition){
 }
 
 Pawn.prototype.moveTo = function(targetPosition){    
-    if(this.isValidPosition(targetPosition)){
+    if(this.isValidMove(targetPosition)){
         this.position = targetPosition.col + targetPosition.row;
         this.render();
     }else{
