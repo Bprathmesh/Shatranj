@@ -7,6 +7,21 @@ var Rook = function(config) {
 Rook.prototype = Object.create(Piece.prototype);
 Rook.prototype.constructor = Rook;
 
+Rook.prototype.isValidMove = function(targetPosition){
+    let currentCol = this.position[0];
+    let currentRow = parseInt(this.position[1]);
+
+    // Extract the target position
+    let targetCol = targetPosition.col;
+    let targetRow = parseInt(targetPosition.row);
+
+    // Check if the move is horizontal or vertical
+    const isHorizontal = (targetCol === currentCol);
+    const isVertical = (targetRow === currentRow);
+
+    return (isHorizontal || isVertical)  
+}
+
 Rook.prototype.moveTo = function(targetPosition) {
     // Extract the current position (e.g., 'A1' -> 'A' and 1)
     let currentCol = this.position[0];

@@ -9,6 +9,28 @@ Piece.prototype.moveTo = function(targetPosition){
     console.log("Method not implemeted by: " + this.type);
 }
 
+Piece.prototype.capturePiece = function(targetPiece) {
+    console.log("Capturing piece: " + targetPiece.type + " at " + targetPiece.position);
+
+    // Remove the piece from the DOM
+    if (targetPiece.$el && targetPiece.$el.parentNode) {
+        targetPiece.$el.parentNode.removeChild(targetPiece.$el);
+    }
+
+    // Remove the piece from the board's list of pieces
+    const pieceList = (targetPiece.color === 'white') ? board.whitePieces : board.blackPieces;
+    
+    for (let pieceType in pieceList) {
+        if (Array.isArray(pieceList[pieceType])) {
+            pieceList[pieceType] = pieceList[pieceType].filter(p => p !== targetPiece);
+        } else {
+            if (pieceList[pieceType] === targetPiece) {
+                delete pieceList[pieceType];
+            }
+        }
+    }
+};
+
 
 Piece.prototype.attachListeners = function(){
     //To be implemented

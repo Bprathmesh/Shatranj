@@ -7,6 +7,22 @@ var Bishop = function(config){
 Bishop.prototype = Object.create(Piece.prototype);
 Bishop.prototype.constructor = Bishop;
 
+Bishop.prototype.isValidMove = function(targetPosition){
+    let currentCol = this.position[0];
+    let currentRow = parseInt(this.position[1]);
+
+    // Extract the target position (e.g., 'F4' -> 'F' and 4)
+    let targetCol = targetPosition.col;
+    let targetRow = parseInt(targetPosition.row);
+
+    // Calculate column and row differences
+    let colDifference = Math.abs(targetCol.charCodeAt(0) - currentCol.charCodeAt(0));
+    let rowDifference = Math.abs(targetRow - currentRow);
+
+    // The bishop can move diagonally, so the column and row differences should be equal
+    return (colDifference === rowDifference) 
+}
+
 Bishop.prototype.moveTo = function(targetPosition){
     // Extract the current position (e.g., 'C1' -> 'C' and 1)
     let currentCol = this.position[0];
