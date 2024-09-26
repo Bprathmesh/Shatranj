@@ -7,51 +7,56 @@ var Bishop = function(config){
 Bishop.prototype = Object.create(Piece.prototype);
 Bishop.prototype.constructor = Bishop;
 
-Bishop.prototype.isValidMove = function(targetPosition){
+Bishop.prototype.isValidMove = function(targetPosition, board){
     let currentCol = this.position[0];
     let currentRow = parseInt(this.position[1]);
 
-    // Extract the target position (e.g., 'F4' -> 'F' and 4)
     let targetCol = targetPosition.col;
     let targetRow = parseInt(targetPosition.row);
 
-    // Calculate column and row differences
     let colDifference = Math.abs(targetCol.charCodeAt(0) - currentCol.charCodeAt(0));
     let rowDifference = Math.abs(targetRow - currentRow);
 
-    // The bishop can move diagonally, so the column and row differences should be equal
-    return (colDifference === rowDifference) 
-}
-
-Bishop.prototype.moveTo = function(targetPosition){
-    // Extract the current position (e.g., 'C1' -> 'C' and 1)
-    let currentCol = this.position[0];
-    let currentRow = parseInt(this.position[1]);
-
-    // Extract the target position (e.g., 'F4' -> 'F' and 4)
-    let targetCol = targetPosition.col;
-    let targetRow = parseInt(targetPosition.row);
-
-    // Calculate column and row differences
-    let colDifference = Math.abs(targetCol.charCodeAt(0) - currentCol.charCodeAt(0));
-    let rowDifference = Math.abs(targetRow - currentRow);
-
-    // The bishop can move diagonally, so the column and row differences should be equal
-    if (colDifference === rowDifference) {
-        // Valid move, update the position
-        this.position = targetCol + targetRow;
-        this.render(); // Re-render the piece at the new position
-    } else {
-        console.warn("Invalid move for the bishop.");
+    // Check if the move is diagonal
+    if (colDifference !== rowDifference) {
+        return false;
     }
+
+    // Check for pieces in the path
+    let colStep = targetCol > currentCol ? 1 : -1;
+    let rowStep = targetRow > currentRow ? 1 : -1;
+
+    let checkCol = currentCol.charCodeAt(0) + colStep;
+    let checkRow = currentRow + rowStep;
+
+    while (checkCol !== targetCol.charCodeAt(0) && checkRow !== targetRow) {
+        let checkPosition = {
+            col: String.fromCharCode(checkCol),
+            row: checkRow.toString()
+        };
+        
+        if (board.getPieceAt(checkPosition)) {
+            return false; // There's a piece blocking the path
+        }
+
+        checkCol += colStep;
+        checkRow += rowStep;
+    }
+
+    // Check if the target square is occupied by a piece of the same color
+    let pieceAtTarget = board.getPieceAt(targetPosition);
+    if (pieceAtTarget && pieceAtTarget.color === this.color) {
+        return false;
+    }
+
+    return true;
 };
 
-Bishop.prototype.getAvailableMoves = function() {
+Bishop.prototype.getAvailableMoves = function(board) {
     let moves = [];
     let currentCol = this.position[0].charCodeAt(0);
     let currentRow = parseInt(this.position[1]);
 
-    // Define the four diagonal directions
     let directions = [
         {colDir: 1, rowDir: 1},   // up-right
         {colDir: 1, rowDir: -1},  // down-right
@@ -60,15 +65,23 @@ Bishop.prototype.getAvailableMoves = function() {
     ];
 
     for (let direction of directions) {
-        for (let i = 1; i <= 7; i++) {  // maximum 7 steps in any direction
+        for (let i = 1; i <= 7; i++) {
             let newCol = String.fromCharCode(currentCol + i * direction.colDir);
             let newRow = currentRow + i * direction.rowDir;
 
-            // Check if the new position is within the board
             if (newCol >= 'A' && newCol <= 'H' && newRow >= 1 && newRow <= 8) {
-                moves.push({col: newCol, row: newRow});
+                let targetPosition = {col: newCol, row: newRow.toString()};
+                
+                if (this.isValidMove(targetPosition, board)) {
+                    moves.push(targetPosition);
+                }
+
+                // Stop if we hit a piece
+                if (board.getPieceAt(targetPosition)) {
+                    break;
+                }
             } else {
-                break;  // Stop if we've gone off the board
+                break;
             }
         }
     }
