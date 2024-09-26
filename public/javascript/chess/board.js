@@ -1,10 +1,14 @@
 var Board = function(config){
     this.root_id = config.root_id;
     this.$el = document.getElementById(this.root_id);
-    this.turn = 'white'; // Start with white's turn
-    this.selectedPiece = null; // Track the selected piece
+    this.turn = 'white';
+    this.selectedPiece = null;
+    this.whitePieces = {};
+    this.blackPieces = {};
     this.generateBoardDom();
     this.addListeners();
+    this.initiateGame();
+    this.renderAllPieces();
 }
 
 Board.prototype.switchTurn = function() {
@@ -12,12 +16,11 @@ Board.prototype.switchTurn = function() {
     console.log("It's now " + this.turn + "'s turn");
 };
 
-
 Board.prototype.addListeners = function(){
     this.$el.addEventListener('click', this.boardClicked.bind(this));
 }
 
-Board.prototype.generateBoardDom = function(config){
+Board.prototype.generateBoardDom = function(){
     let boardHTML = '<ul id="game-ct">';
     const columns = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
     
@@ -35,11 +38,9 @@ Board.prototype.generateBoardDom = function(config){
 }
 
 Board.prototype.getClickedBlock = function(clickEvent){
-    // Get the clicked block
     const clickedCell = clickEvent.target.closest('li');
         
     if (clickedCell) {
-        // Extract row and column from data attributes
         const row = clickedCell.getAttribute('data-row');
         const parentLi = clickedCell.closest('li[data-col]');
         const col = parentLi ? parentLi.getAttribute('data-col') : null;
@@ -58,21 +59,20 @@ Board.prototype.getClickedBlock = function(clickEvent){
 }
 
 Board.prototype.clearSelection = function(){
-    // Remove 'selected' class from all pieces
     const allPieces = document.querySelectorAll('.piece');
     allPieces.forEach(piece => {
         piece.classList.remove('selected');
     });
 };
+
 Board.prototype.boardClicked = function(event){    
     this.clearSelection();
     const clickedCell = this.getClickedBlock(event);
     
-    if (!clickedCell) return; // Exit if the click is not on a valid cell
+    if (!clickedCell) return;
 
     const selectedPiece = this.getPieceAt(clickedCell);
     
-    // If a piece is clicked, check if it's the current player's turn
     if (selectedPiece) {
         if (selectedPiece.color !== this.turn) {
             console.warn("It's not your turn.");
@@ -80,13 +80,11 @@ Board.prototype.boardClicked = function(event){
         }
         this.selectPiece(event.target, selectedPiece);
     } else {
-        // If no piece is clicked, attempt to move the selected piece
         if (this.selectedPiece) {
-            // Only allow the piece to move if it's the correct player's turn
             if (this.selectedPiece.color === this.turn) {
-                if (this.selectedPiece.isValidMove(clickedCell)) {
-                    this.selectedPiece.moveTo(clickedCell);
-                    this.switchTurn(); // Only switch turn if the move is valid
+                if (this.selectedPiece.isValidMove(clickedCell, this)) {
+                    this.movePiece(this.selectedPiece, clickedCell);
+                    this.switchTurn();
                 } else {
                     console.warn("Invalid move for this piece.");
                 }
@@ -97,58 +95,73 @@ Board.prototype.boardClicked = function(event){
     }    
 };
 
+Board.prototype.movePiece = function(piece, targetPosition) {
+    let currentPosition = {col: piece.position[0], row: piece.position[1]};
+    this.setPieceAt(currentPosition, null);
 
-
-
-Board.prototype.getPieceAt = function(cell){
-    if (!cell || !cell.row || !cell.col) {
-        return false;
+    let capturedPiece = this.getPieceAt(targetPosition);
+    if (capturedPiece) {
+        this.removePiece(capturedPiece);
     }
 
-    const position = cell.col + cell.row;
+    this.setPieceAt(targetPosition, piece);
+    piece.position = targetPosition.col + targetPosition.row;
+    piece.render();
+};
 
-    // Check white pieces
-    for (let pieceType in this.whitePieces) {
-        if (Array.isArray(this.whitePieces[pieceType])) {
-            // For arrays (pawns, bishops, knights, rooks)
-            for (let piece of this.whitePieces[pieceType]) {
-                if (piece.position === position) {
-                    return piece;
-                }
+Board.prototype.setPieceAt = function(position, piece) {
+    let col = position.col;
+    let row = position.row;
+    
+    if (piece) {
+        if (piece.color === 'white') {
+            if (!this.whitePieces[piece.type]) {
+                this.whitePieces[piece.type] = {};
             }
+            this.whitePieces[piece.type][col + row] = piece;
         } else {
-            // For single pieces (king, queen)
-            if (this.whitePieces[pieceType].position === position) {
-                return this.whitePieces[pieceType];
+            if (!this.blackPieces[piece.type]) {
+                this.blackPieces[piece.type] = {};
+            }
+            this.blackPieces[piece.type][col + row] = piece;
+        }
+    } else {
+        // Remove piece
+        for (let color of ['white', 'black']) {
+            let pieces = color === 'white' ? this.whitePieces : this.blackPieces;
+            for (let type in pieces) {
+                if (pieces[type][col + row]) {
+                    delete pieces[type][col + row];
+                }
             }
         }
     }
+};
 
-    // Check black pieces
-    for (let pieceType in this.blackPieces) {
-        if (Array.isArray(this.blackPieces[pieceType])) {
-            // For arrays (pawns, bishops, knights, rooks)
-            for (let piece of this.blackPieces[pieceType]) {
-                if (piece.position === position) {
-                    return piece;
-                }
-            }
-        } else {
-            // For single pieces (king, queen)
-            if (this.blackPieces[pieceType].position === position) {
-                return this.blackPieces[pieceType];
+Board.prototype.getPieceAt = function(position) {
+    let positionStr = position.col + position.row;
+    
+    for (let color of ['white', 'black']) {
+        let pieces = color === 'white' ? this.whitePieces : this.blackPieces;
+        for (let type in pieces) {
+            if (pieces[type][positionStr]) {
+                return pieces[type][positionStr];
             }
         }
     }
-    return false;
-}
+    
+    return null;
+};
+
+Board.prototype.removePiece = function(piece) {
+    let position = {col: piece.position[0], row: piece.position[1]};
+    this.setPieceAt(position, null);
+};
 
 Board.prototype.selectPiece = function(clickedElement, selectedPiece) {
     if (clickedElement.classList.contains('piece')) {
-        // If the clicked element is a piece, add the 'selected' class
         clickedElement.classList.add('selected');
     } else {
-        // If the clicked element is not a piece, check its parent
         const parentElement = clickedElement.closest('.piece');
         if (parentElement) {
             parentElement.classList.add('selected');
@@ -159,71 +172,38 @@ Board.prototype.selectPiece = function(clickedElement, selectedPiece) {
 }
 
 Board.prototype.initiateGame = function() {
-    // Create white pieces
-    this.whitePieces = {
-        king: new King({ color: 'white', position: 'E1' }),
-        queen: new Queen({ color: 'white', position: 'D1' }),
-        bishops: [
-            new Bishop({ color: 'white', position: 'C1' }),
-            new Bishop({ color: 'white', position: 'F1' })
-        ],
-        knights: [
-            new Knight({ color: 'white', position: 'B1' }),
-            new Knight({ color: 'white', position: 'G1' })
-        ],
-        rooks: [
-            new Rook({ color: 'white', position: 'A1' }),
-            new Rook({ color: 'white', position: 'H1' })
-        ],
-        pawns: []
-    };
+    const pieceTypes = ['Rook', 'Knight', 'Bishop', 'Queen', 'King', 'Bishop', 'Knight', 'Rook'];
+    const columns = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
 
-    // Create white pawns
-    for (let i = 0; i < 8; i++) {
-        this.whitePieces.pawns.push(new Pawn({ color: 'white', position: String.fromCharCode(65 + i) + '2' }));
-    }
+    // Create pieces for both colors
+    for (let color of ['white', 'black']) {
+        let row = color === 'white' ? '1' : '8';
+        let pawnRow = color === 'white' ? '2' : '7';
 
-    // Create black pieces
-    this.blackPieces = {
-        king: new King({ color: 'black', position: 'E8' }),
-        queen: new Queen({ color: 'black', position: 'D8' }),
-        bishops: [
-            new Bishop({ color: 'black', position: 'C8' }),
-            new Bishop({ color: 'black', position: 'F8' })
-        ],
-        knights: [
-            new Knight({ color: 'black', position: 'B8' }),
-            new Knight({ color: 'black', position: 'G8' })
-        ],
-        rooks: [
-            new Rook({ color: 'black', position: 'A8' }),
-            new Rook({ color: 'black', position: 'H8' })
-        ],
-        pawns: []
-    };
+        // Create main pieces
+        for (let i = 0; i < 8; i++) {
+            let pieceType = pieceTypes[i].toLowerCase();
+            let position = columns[i] + row;
+            let piece = new window[pieceTypes[i]]({ color: color, position: position });
+            this.setPieceAt({ col: columns[i], row: row }, piece);
+        }
 
-    // Create black pawns
-    for (let i = 0; i < 8; i++) {
-        this.blackPieces.pawns.push(new Pawn({ color: 'black', position: String.fromCharCode(65 + i) + '7' }));
+        // Create pawns
+        for (let i = 0; i < 8; i++) {
+            let position = columns[i] + pawnRow;
+            let piece = new Pawn({ color: color, position: position });
+            this.setPieceAt({ col: columns[i], row: pawnRow }, piece);
+        }
     }
 };
 
 Board.prototype.renderAllPieces = function() {
-    // Render white pieces
-    Object.values(this.whitePieces).forEach(piece => {
-        if (Array.isArray(piece)) {
-            piece.forEach(p => p.render());
-        } else {
-            piece.render();
+    for (let color of ['white', 'black']) {
+        let pieces = color === 'white' ? this.whitePieces : this.blackPieces;
+        for (let type in pieces) {
+            for (let position in pieces[type]) {
+                pieces[type][position].render();
+            }
         }
-    });
-
-    // Render black pieces
-    Object.values(this.blackPieces).forEach(piece => {
-        if (Array.isArray(piece)) {
-            piece.forEach(p => p.render());
-        } else {
-            piece.render();
-        }
-    });
+    }
 };
